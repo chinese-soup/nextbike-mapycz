@@ -51,10 +51,10 @@
 
         function refresh()
         {
-            loadMarks();
+            loadMarks(false);
         }
 
-        function loadMarks()
+        function loadMarks(reset_view)
         {
             $.get( "https://api.nextbike.net/maps/nextbike-live.json?apikey=&city=661&include_domains=tg%2Cde&response_type=json&show_errors=1", function( returned_data )
             {
@@ -65,8 +65,7 @@
                 var obj = datatest.countries[0].cities[0].places;
                 var data = {};
 
-                for (var key in obj)
-                {
+                for (var key in obj) {
                     var value = obj[key];
                     data[value.name] = [value.lat, value.lng, value.bikes, value.name];
                 }
@@ -74,8 +73,7 @@
                 var znacky = [];
                 var souradnice = [];
 
-                for (var name in data) 
-                { /* Vyrobit značky */
+                for (var name in data) { /* Vyrobit značky */
                     console.log(data[name]);
                     var c = SMap.Coords.fromWGS84(data[name][1], data[name][0]); /* Souřadnice značky, z textového formátu souřadnic */
 
@@ -109,8 +107,10 @@
                     vrstva.addMarker(znacky[i]);
                 }
 
-                var cz = m.computeCenterZoom(souradnice); // Spočítat pozici mapy tak, aby značky byly vidět 
-                m.setCenterZoom(cz[0], cz[1]); 
+                if (reset_view) {
+                    var cz = m.computeCenterZoom(souradnice); // Spočítat pozici mapy tak, aby značky byly vidět
+                    m.setCenterZoom(cz[0], cz[1]);
+                }
             });
         }
 
@@ -137,7 +137,7 @@
             dataProvider.setMapSet(SMap.MAPSET_BASE);
             dataProvider.enable();
 
-            loadMarks();
+            loadMarks(true);
 
         }
     </script>
