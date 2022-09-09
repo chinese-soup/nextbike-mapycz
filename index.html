@@ -53,6 +53,7 @@
         </style>
     <script>
         var m;
+        var vrstva;
 
         var cities = {}
         var current_city = 661;
@@ -131,13 +132,11 @@
                 
                 /* Křivoklát ukotvíme za střed značky, přestože neznáme její velikost */
                 var options = {
-                    anchor: {left:0.5, top:0.5}
+                    anchor: { left:0.5, top:0.5 }
                 }
                 znacky[1].decorate(SMap.Marker.Feature.RelativeAnchor, options);
 
-                var vrstva = new SMap.Layer.Marker();     /* Vrstva se značkami */
-                m.addLayer(vrstva);                       /* Přidat ji do mapy */
-                vrstva.enable();                         /* A povolit */
+                vrstva.removeAll(); // Remove all previous markers
 
                 for (var i=0; i < znacky.length; i++) {
                     vrstva.addMarker(znacky[i]);
@@ -165,6 +164,10 @@
                 poiTooltip: true
             });
             m.addLayer(layer).enable();
+
+            vrstva = new SMap.Layer.Marker();     /* Vrstva se značkami */
+            m.addLayer(vrstva);                       /* Přidat ji do mapy */
+            vrstva.enable();                         /* A povolit */
 
             /* dataProvider zastiti komunikaci se servery */
             var dataProvider = m.createDefaultDataProvider();
