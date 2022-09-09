@@ -4,12 +4,13 @@
         <meta charset="utf-8" />
         <title>NextBike on Mapy.cz</title>
         <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
-        <script type="text/javascript">Loader.load();</script>
+        <script type="text/javascript">Loader.load(null, {poi:true});</script>
         <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
         <style>
             html 
             {
                 margin: 0px;
+                font-family: Helvetica, sans-serif;
                 height: 100%;
             }
             #m
@@ -21,23 +22,46 @@
                 right:0px;
                 bottom:0px;
                 left:0px;
+                z-index: -1;
+            }
+            #overlay
+            {
+                z-index: 9999;
+                color: #fafafa;
+                height: auto;
+                width: 30vw;
+                padding: 8px;
+                background: rgba(0, 0, 0, 0.5);
             }
         </style>
     <script>
-        function onLoad()
+        var m;
+
+        var obrazek_empty = "kolo_empty_icon.png";
+        var obrazek_full = "kolo_full_icon.png";
+
+        function getCities()
         {
-            var obrazek_empty = "kolo_empty_icon.png";
-            var obrazek_full = "kolo_full_icon.png"
+            fetch('https://maps.nextbike.net/maps/nextbike-official.json?list_cities=1')
+            .then((response) => response.json())
+            .then(
+                (data) => console.log(data)
+            );
+        }
 
-            var m = new SMap(JAK.gel("m"));
-            m.addControl(new SMap.Control.Sync()); /* Aby mapa reagovala na změnu velikosti průhledu */
-            m.addDefaultLayer(SMap.DEF_TURIST).enable(); /* Turistický podklad */
-            var mouse = new SMap.Control.Mouse(SMap.MOUSE_PAN | SMap.MOUSE_WHEEL | SMap.MOUSE_ZOOM); /* Ovládání myší */
-            m.addControl(mouse); 
+        function refresh()
+        {
+            loadMarks();
+        }
 
+        function loadMarks()
+        {
             $.get( "https://api.nextbike.net/maps/nextbike-live.json?apikey=&city=661&include_domains=tg%2Cde&response_type=json&show_errors=1", function( returned_data )
             {
                 var datatest = returned_data;
+                $("#bike_count").html(datatest.countries[0].cities[0].available_bikes);
+                $("#last_refresh").html(new Date().toLocaleString());
+                console.log(returned_data);
                 var obj = datatest.countries[0].cities[0].places;
                 var data = {};
 
@@ -63,7 +87,7 @@
                     
                     var card = new SMap.Card();
                     card.getHeader().innerHTML = "<strong>" + data[name][3] + "</strong>";
-                    card.getBody().innerHTML = "Počet kol: " + data[name][2] + "</em>";
+                    card.getBody().innerHTML = "Number of bikes: " + data[name][2] + "</em>";
 
                     var znacka = new SMap.Marker(c, null, options);
                     znacka.decorate(SMap.Marker.Feature.Card, card);
@@ -85,14 +109,47 @@
                     vrstva.addMarker(znacky[i]);
                 }
 
-                var cz = m.computeCenterZoom(souradnice); /* Spočítat pozici mapy tak, aby značky byly vidět */
-                m.setCenterZoom(cz[0], cz[1]);   
+                var cz = m.computeCenterZoom(souradnice); // Spočítat pozici mapy tak, aby značky byly vidět 
+                m.setCenterZoom(cz[0], cz[1]); 
             });
+        }
+
+        function onLoad()
+        {
+            getCities();
+
+            m = new SMap(JAK.gel("m"));
+            m.addControl(new SMap.Control.Sync()); /* Aby mapa reagovala na změnu velikosti průhledu */
+            m.addDefaultLayer(SMap.DEF_TURIST).enable(); /* Turistický podklad */
+            var mouse = new SMap.Control.Mouse(SMap.MOUSE_PAN | SMap.MOUSE_WHEEL | SMap.MOUSE_ZOOM); /* Ovládání myší */
+            m.addControl(mouse); 
+
+            /* znackova vrstva pro ikonky bodu zajmu; poiToolTip - zapneme title jako nazev nad POI */
+            var layer = new SMap.Layer.Marker(undefined, {
+                poiTooltip: true
+            });
+            m.addLayer(layer).enable();
+
+            /* dataProvider zastiti komunikaci se servery */
+            var dataProvider = m.createDefaultDataProvider();
+            dataProvider.setOwner(m);
+            dataProvider.addLayer(layer);
+            dataProvider.setMapSet(SMap.MAPSET_BASE);
+            dataProvider.enable();
+
+            loadMarks();
+
         }
     </script>
 
     </head>
     <body id="advanced-markers" onload="onLoad();">
         <div id="m"></div>
+        <div id="overlay">
+            Available bikes: <span id="bike_count"></span><br>
+            Last refresh: <span id="last_refresh"></span><br>
+            <button href="javascript:void(0);" onclick="refresh();">Refresh</button>
+
+        </div>
     </body>
 </html> 
