@@ -3,6 +3,9 @@
     <head>
         <meta charset="utf-8" />
         <title>NextBike on Mapy.cz</title>
+        <!-- Map Marker originally by
+            <a href="https://commons.wikimedia.org/wiki/File:Map_marker.svg">Andrew Onorato, modified by User:Psubhashish</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0">CC BY-SA 3.0</a>, via Wikimedia Commons
+        -->
         <script type="text/javascript" src="https://api.mapy.cz/loader.js"></script>
         <script type="text/javascript">Loader.load(null, {poi:true});</script>
         <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
@@ -32,36 +35,71 @@
                 width: 30vw;
                 padding: 8px;
                 background: rgba(0, 0, 0, 0.5);
+                border-radius: 8px;
+            }
+            button
+            {
+                font-size: 14px;
+                width: 100px;
+                height: 25px;
+                padding: 3px;
+                background: #e5e5e5;
+                color: #000;
+                outline: none;
+                border-radius: 4px;
+                border: 1px solid black;
+                transition: 0.5s;
             }
         </style>
     <script>
         var m;
 
-        var obrazek_empty = "kolo_empty_icon.png";
-        var obrazek_full = "kolo_full_icon.png";
+        var cities = {}
+        var current_city = 661;
 
         function getCities()
         {
-            fetch('https://maps.nextbike.net/maps/nextbike-official.json?list_cities=1')
-            .then((response) => response.json())
-            .then(
-                (data) => console.log(data)
-            );
+            $.get( "https://maps.nextbike.net/maps/nextbike-official.json?list_cities=1", function( returned_data ) 
+            {
+                var datatest = returned_data;
+                for (var key in datatest.countries) {
+                    if (datatest.countries[key].cities.length !== 0) {
+                        for (var city_key in datatest.countries[key].cities) {
+                            city_name = datatest.countries[key].cities[city_key].name
+                            city_uid = datatest.countries[key].cities[city_key].uid
+                            // cities[city_uid] = city_name;
+                            $("#citySelect").append(new Option(city_name, city_uid))
+                        }
+                    }
+                }
+            });
+        }
+
+        function citySelectionChanged(val)
+        {
+            current_city = val;
+            $("#citySelect").val(current_city);
+            loadMarks(current_city, true);
+            console.log("City selection says" + current_city);
         }
 
         function refresh()
         {
-            loadMarks(false);
+            console.log("Refresh says" + current_city);
+            loadMarks(current_city, false);
         }
 
-        function loadMarks(reset_view)
+        function loadMarks(city_id, reset_view)
         {
-            $.get( "https://api.nextbike.net/maps/nextbike-live.json?apikey=&city=661&include_domains=tg%2Cde&response_type=json&show_errors=1", function( returned_data )
+            if (city_id == undefined) {
+                city_id = "661";
+            }
+            $.get( "https://api.nextbike.net/maps/nextbike-live.json?apikey=&city=" + city_id + "&include_domains=tg%2Cde&response_type=json&show_errors=1", function( returned_data )
             {
                 var datatest = returned_data;
                 $("#bike_count").html(datatest.countries[0].cities[0].available_bikes);
                 $("#last_refresh").html(new Date().toLocaleString());
-                console.log(returned_data);
+
                 var obj = datatest.countries[0].cities[0].places;
                 var data = {};
 
@@ -74,11 +112,9 @@
                 var souradnice = [];
 
                 for (var name in data) { /* Vyrobit značky */
-                    console.log(data[name]);
                     var c = SMap.Coords.fromWGS84(data[name][1], data[name][0]); /* Souřadnice značky, z textového formátu souřadnic */
-
                     var options = {
-                        url: data[name][2] == 0 ? obrazek_empty : obrazek_full,
+                        url: (data[name][2] > 9) ? `marker/markerplus.png` : `marker/marker${data[name][2]}.png`,
                         title: name,
                         anchor: { left: 0, bottom: 10 }  /* Ukotvení značky za bod uprostřed dole */
                     }
@@ -102,7 +138,7 @@
                 var vrstva = new SMap.Layer.Marker();     /* Vrstva se značkami */
                 m.addLayer(vrstva);                       /* Přidat ji do mapy */
                 vrstva.enable();                         /* A povolit */
-                
+
                 for (var i=0; i < znacky.length; i++) {
                     vrstva.addMarker(znacky[i]);
                 }
@@ -137,7 +173,7 @@
             dataProvider.setMapSet(SMap.MAPSET_BASE);
             dataProvider.enable();
 
-            loadMarks(true);
+            loadMarks(661, true);
 
         }
     </script>
@@ -148,8 +184,10 @@
         <div id="overlay">
             Available bikes: <span id="bike_count"></span><br>
             Last refresh: <span id="last_refresh"></span><br>
-            <button href="javascript:void(0);" onclick="refresh();">Refresh</button>
 
+            <button href="javascript:void(0);" onclick="refresh();">Refresh</button>
+            <select id="citySelect" onChange="citySelectionChanged(this.value);">
+            </select>
         </div>
     </body>
-</html> 
+</html>
